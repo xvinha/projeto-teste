@@ -20,12 +20,13 @@ const isActive = (path: string): boolean => {
   <header class="site-header">
     <div class="header-inner">
       <RouterLink to="/dashboard" class="brand">
-        Estante Viva<span class="brand-dot">•</span>
+        <span class="brand-icon">E</span>
+        Estante Viva
       </RouterLink>
 
       <nav class="nav-links" aria-label="Navegação principal">
         <RouterLink to="/dashboard" class="nav-link" :class="{ active: isActive('/dashboard') }">
-          Perfil
+          Meu Perfil
         </RouterLink>
         <RouterLink to="/library" class="nav-link" :class="{ active: isActive('/library') }">
           Biblioteca
@@ -34,7 +35,7 @@ const isActive = (path: string): boolean => {
 
       <div class="header-actions">
         <span class="signed-user">{{ user?.name ?? 'Usuário' }}</span>
-        <button type="button" class="secondary small" @click="handleLogout">Sair</button>
+        <button type="button" class="btn secondary small" @click="handleLogout">Sair</button>
       </div>
     </div>
   </header>
