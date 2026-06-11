@@ -1,0 +1,30 @@
+// Generated to match `back-end/Estante_Vive.sqlite`
+
+Table users {
+  id integer [pk, increment]
+  name text [not null]
+  email text [not null, unique]
+  password text [not null]
+  role text [not null, note: "CHECK(role IN ('student','teacher','donator','admin'))"]
+  points integer [not null, default: 0]
+  institution text [not null]
+  created_at text [not null]
+}
+
+Table books {
+  id integer [pk, increment]
+  title text [not null]
+  author text [not null]
+  release_date text [not null]
+  edition text
+  status text [not null, default: 'available', note: "CHECK(status IN ('available','lent'))"]
+  created_at text [not null]
+}
+
+Table loans {
+  id integer [pk, increment]
+  user_id integer [not null, ref: > users.id]
+  book_id integer [not null, ref: > books.id]
+  return_date text [not null]
+  returned_at text
+}
