@@ -34,6 +34,28 @@ Create a `.env.local` file to override:
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
+For production builds in this repository, `.env.production` already points to the deployed API:
+
+```
+VITE_API_BASE_URL=https://estanteviva.fly.dev
+```
+
+## Deploy
+
+The front-end is ready to be deployed as a static SPA. For Vercel:
+
+```bash
+vercel --prod
+```
+
+`vercel.json` rewrites all routes to `index.html`, which is required for Vue Router history navigation.
+
+After publishing the front-end, allow its domain in the Fly back-end:
+
+```bash
+flyctl secrets set ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app
+```
+
 ## Project structure
 
 ```
