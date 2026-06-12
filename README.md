@@ -1,4 +1,4 @@
-# Estante Vive — Application Prototype
+# Estante Viva — Application Prototype
 
 A book-lending web application. Users can browse books, borrow them, and track their loans.
 
