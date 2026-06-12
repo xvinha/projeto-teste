@@ -35,7 +35,19 @@ import {
   list_user_new_book_orders_handler,
 } from "./service/new_book_store_service"
 
-const ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:4173"]
+const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:4173"]
+const CONFIGURED_ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+const FLY_APP_ORIGIN = process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : null
+const ALLOWED_ORIGINS = [...new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...CONFIGURED_ALLOWED_ORIGINS,
+  ...(FLY_APP_ORIGIN ? [FLY_APP_ORIGIN] : []),
+])]
+const HOST = process.env.HOST ?? "0.0.0.0"
+const PORT = Number(process.env.PORT ?? 3000)
 
 const corsHeaders = (origin: string | null) => ({
   "Access-Control-Allow-Origin": origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
@@ -57,6 +69,8 @@ const withCors = (handler: Handler): Handler =>
   }
 
 const server = Bun.serve({
+  hostname: HOST,
+  port: PORT,
   fetch(req) {
     if (req.method === "OPTIONS") {
       const origin = req.headers.get("Origin")
@@ -95,7 +109,6 @@ const server = Bun.serve({
     "/donation-requests/:id/reject": { POST: withCors(reject_donation_request_handler) },
     "/users/:id/donation-requests": { GET: withCors(list_user_donation_requests_handler) },
   },
-  port: 3000,
 })
 
-console.log(`Server running on http://localhost:${server.port}`)
+console.log(`Server running on http://${HOST}:${server.port}`)
