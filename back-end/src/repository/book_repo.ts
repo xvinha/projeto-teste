@@ -1,16 +1,27 @@
 import type { Book } from "../types"
 import database from "./repo"
 
-const get_books_query = database.query(`SELECT * FROM books`)
+const get_books_query = database.query(`SELECT * FROM books WHERE destination = 'library'`)
 const get_book_by_id_query = database.query(`SELECT * FROM books WHERE id = ?`)
-const create_book_stmt = database.prepare(`INSERT INTO books (title, author, release_date, edition, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+const create_book_stmt = database.prepare(
+  `INSERT INTO books (title, author, release_date, edition, status, destination, created_at, donor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+)
 
 export const get_books = () => get_books_query.all()
 
 export const get_book_by_id = (id: number) => get_book_by_id_query.get(id)
 
-export const create_book = (book: Book) =>
-  create_book_stmt.run(book.title, book.author, book.release_date, book.edition ?? null, book.status, book.created_at)
+export const create_book = (book: Book & { donor_id?: number }) =>
+  create_book_stmt.run(
+    book.title,
+    book.author,
+    book.release_date,
+    book.edition ?? null,
+    book.status,
+    book.destination ?? "library",
+    book.created_at,
+    book.donor_id ?? null,
+  )
 
 const update_book_status_stmt = database.prepare(`UPDATE books SET status = ? WHERE id = ?`)
 

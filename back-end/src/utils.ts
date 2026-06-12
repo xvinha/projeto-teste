@@ -10,7 +10,7 @@ export const isUser = (body: any): body is User => {
     ['student', 'teacher', 'donator', 'admin'].includes(body.role) &&
     typeof body.points === "number" &&
     typeof body.created_at === "string" &&
-    typeof body.institution === "string"
+    typeof body.campus === "string"
   )
 }
 

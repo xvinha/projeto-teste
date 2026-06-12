@@ -4,6 +4,7 @@ import {
   get_user_by_id,
   get_user_by_credentials,
   update_password,
+  update_password_by_admin,
 } from "../repository/user_repo";
 import { isUser } from "../utils";
 
@@ -85,6 +86,42 @@ export const change_password = async (req: Request) => {
 
   if (result.changes === 0) {
     return new Response(`Current password is incorrect`, { status: 401 });
+  }
+
+  return Response.json({ message: `Password updated successfully`, success: true });
+};
+
+export const admin_change_user_password = async (req: Request) => {
+  const id = Number(req.url.split("/")[req.url.split("/").indexOf("users") + 1]);
+
+  if (isNaN(id)) {
+    return new Response(`Invalid ID`, { status: 400 });
+  }
+
+  const body = await req.json();
+  const { admin_id, new_password } = body;
+
+  if (typeof admin_id !== "number") {
+    return new Response(`Missing admin_id`, { status: 400 });
+  }
+
+  if (typeof new_password !== "string" || new_password.length < 6) {
+    return new Response(`Invalid new_password`, { status: 400 });
+  }
+
+  const admin = get_user_by_id(admin_id) as { role?: string } | null;
+  if (!admin || admin.role !== "admin") {
+    return new Response(`Forbidden`, { status: 403 });
+  }
+
+  const targetUser = get_user_by_id(id);
+  if (!targetUser) {
+    return new Response(`User not found`, { status: 404 });
+  }
+
+  const result = update_password_by_admin(id, new_password);
+  if (result.changes === 0) {
+    return new Response(`Error while updating password`, { status: 500 });
   }
 
   return Response.json({ message: `Password updated successfully`, success: true });

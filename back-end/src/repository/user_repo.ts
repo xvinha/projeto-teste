@@ -2,19 +2,22 @@ import type { User } from "../types";
 import database from "./repo";
 
 const get_users_query = database.query(
-  `SELECT id, name, email, role, points, institution, created_at FROM users`,
+  `SELECT id, name, email, role, points, campus, created_at FROM users`,
 );
 const get_user_by_id_query = database.query(
-  `SELECT id, name, email, role, points, institution, created_at FROM users WHERE id = ?`,
+  `SELECT id, name, email, role, points, campus, created_at FROM users WHERE id = ?`,
 );
 const get_user_by_credentials_query = database.query(
-  `SELECT id, name, email, role, points, institution, created_at FROM users WHERE email = ? AND password = ?`,
+  `SELECT id, name, email, role, points, campus, created_at FROM users WHERE email = ? AND password = ?`,
 );
 const create_user_stmt = database.prepare(
-  `INSERT INTO users (name, email, password, role, points, institution, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  `INSERT INTO users (name, email, password, role, points, campus, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 );
 const update_password_stmt = database.prepare(
   `UPDATE users SET password = ? WHERE id = ? AND password = ?`,
+);
+const admin_update_password_stmt = database.prepare(
+  `UPDATE users SET password = ? WHERE id = ?`,
 );
 
 export const get_users = () => get_users_query.all();
@@ -31,9 +34,19 @@ export const create_user = (user: User) =>
     user.password,
     user.role,
     user.points,
-    user.institution,
+    user.campus,
     user.created_at,
   );
 
 export const update_password = (id: number, current_password: string, new_password: string) =>
   update_password_stmt.run(new_password, id, current_password);
+
+export const update_password_by_admin = (id: number, new_password: string) =>
+  admin_update_password_stmt.run(new_password, id);
+
+const update_user_points_stmt = database.prepare(
+  `UPDATE users SET points = points + ? WHERE id = ?`
+);
+
+export const update_user_points = (id: number, points: number) =>
+  update_user_points_stmt.run(points, id);

@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import type { User, LoginPayload } from '@/types'
 import { apiClient } from './api'
+import { userService } from './index'
 
 const user = ref<User | null>(null)
 const isLoading = ref(false)
@@ -38,10 +39,25 @@ export const useAuth = () => {
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
       try {
-        user.value = JSON.parse(storedUser)
+        const parsed = JSON.parse(storedUser) as User & { institution?: string }
+        user.value = {
+          ...parsed,
+          campus: parsed.campus ?? parsed.institution ?? '',
+        }
       } catch {
         logout()
       }
+    }
+  }
+
+  const refreshUser = async () => {
+    if (!user.value) return
+    try {
+      const refreshedUser = await userService.getUser(user.value.id)
+      user.value = refreshedUser
+      localStorage.setItem('user', JSON.stringify(refreshedUser))
+    } catch (err) {
+      console.error('Failed to refresh user:', err)
     }
   }
 
@@ -53,5 +69,6 @@ export const useAuth = () => {
     login,
     logout,
     loadStoredUser,
+    refreshUser,
   }
 }

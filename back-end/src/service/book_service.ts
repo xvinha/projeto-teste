@@ -25,12 +25,16 @@ export const find_book = (req: Request) => {
 
 export const create_new_book = async (req: Request) => {
   const body = await req.json();
+  const destination = body.destination === "sale" ? "sale" : "library";
 
   if (!isBook(body)) {
     return new Response(`Invalid book format`, { status: 400 });
   }
 
-  const result = create_book(body);
+  const result = create_book({
+    ...body,
+    destination,
+  });
 
   if (result.changes === 0) {
     return new Response(`Error while creating book`, { status: 500 });

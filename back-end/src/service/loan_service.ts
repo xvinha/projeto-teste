@@ -9,8 +9,11 @@ import {
   cancel_reservation_by_user_and_book,
 } from "../repository/loan_repo"
 import { get_book_by_id, update_book_status } from "../repository/book_repo"
+import { get_user_by_id, update_user_points } from "../repository/user_repo"
 import { isLoanPayload } from "../utils"
 import type { Book } from "../types"
+
+const LOAN_COST_POINTS = 10
 
 export const list_loans = () => Response.json(get_loans())
 
@@ -37,6 +40,16 @@ export const borrow_book = async (req: Request) => {
     return new Response(`Invalid loan payload — expected { user_id, book_id }`, { status: 400 })
   }
 
+  const user = get_user_by_id(body.user_id) as { points?: number } | null
+  if (!user) {
+    return new Response(`User not found`, { status: 404 })
+  }
+
+  const points = typeof user.points === "number" ? user.points : 0
+  if (points < LOAN_COST_POINTS) {
+    return new Response(`Pontos insuficientes para empréstimo (custo: ${LOAN_COST_POINTS})`, { status: 403 })
+  }
+
   const book = get_book_by_id(body.book_id) as Book | null
 
   if (!book) {
@@ -56,6 +69,7 @@ export const borrow_book = async (req: Request) => {
     return new Response(`Error while creating loan`, { status: 500 })
   }
 
+  update_user_points(body.user_id, -LOAN_COST_POINTS)
   update_book_status(body.book_id, 'lent')
 
   // Remove any reservation this user had for this book

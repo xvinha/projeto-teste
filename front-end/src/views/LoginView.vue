@@ -1,168 +1,204 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/auth'
-import { apiClient } from '@/services/api'
+import { statsService } from '@/services'
 import { validateEmail } from '@/utils'
+import Logo from '@/components/common/Logo.vue'
 
 const router = useRouter()
-const { login, error: authError } = useAuth()
+const { login } = useAuth()
 
 const email = ref('')
 const password = ref('')
 const errors = ref<Record<string, string>>({})
-const forgotPasswordOpen = ref(false)
+const isSubmitting = ref(false)
+const submitError = ref<string | null>(null)
+
+const stats = ref({ books: 0, users: 0, loans: 0 })
+
+const loadStats = async () => {
+  try {
+    stats.value = await statsService.getStats()
+  } catch (err) {
+    console.error('Erro ao carregar estatísticas:', err)
+  }
+}
+
+onMounted(loadStats)
+
+const showForgotPassword = ref(false)
 const forgotEmail = ref('')
-const forgotErrors = ref<Record<string, string>>({})
-const forgotStatus = ref('')
+const forgotSent = ref(false)
 
 const validateForm = () => {
   errors.value = {}
-
+  submitError.value = null
   if (!email.value.trim()) {
     errors.value.email = 'Email é obrigatório'
   } else if (!validateEmail(email.value)) {
     errors.value.email = 'Email inválido'
   }
-
   if (!password.value) {
     errors.value.password = 'Senha é obrigatória'
-  } else if (password.value.length < 6) {
-    errors.value.password = 'Senha deve ter pelo menos 6 caracteres'
   }
-
   return Object.keys(errors.value).length === 0
-}
-
-const validateForgotPassword = () => {
-  forgotErrors.value = {}
-  forgotStatus.value = ''
-
-  if (!forgotEmail.value.trim()) {
-    forgotErrors.value.email = 'Email é obrigatório'
-  } else if (!validateEmail(forgotEmail.value)) {
-    forgotErrors.value.email = 'Email inválido'
-  }
-
-  return Object.keys(forgotErrors.value).length === 0
 }
 
 const handleSubmit = async () => {
   if (!validateForm()) return
-
+  if (isSubmitting.value) return
   try {
-    await login({ email: email.value, password: password.value })
+    isSubmitting.value = true
+    await login({ email: email.value.trim(), password: password.value })
     router.push('/dashboard')
-  } catch (err) {
-    errors.value.submit = authError.value || 'Erro ao fazer login'
-  }
-}
-
-const openForgotPassword = () => {
-  forgotPasswordOpen.value = true
-  forgotEmail.value = email.value
-  forgotErrors.value = {}
-  forgotStatus.value = ''
-}
-
-const closeForgotPassword = () => {
-  forgotPasswordOpen.value = false
-  forgotStatus.value = ''
-  forgotErrors.value = {}
-}
-
-const handleForgotPassword = async () => {
-  if (!validateForgotPassword()) return
-
-  try {
-    await apiClient.post('/forgot-password', { email: forgotEmail.value.trim() })
-    forgotStatus.value = 'Se o email existir, enviaremos instruções para redefinir sua senha.'
   } catch {
-    forgotStatus.value = 'Se o email existir, enviaremos instruções para redefinir sua senha.'
+    submitError.value = 'Email ou senha inválidos. Verifique seus dados.'
+  } finally {
+    isSubmitting.value = false
   }
 }
+
+const openForgotPassword = () => { showForgotPassword.value = true }
+const closeForgotPassword = () => {
+  showForgotPassword.value = false
+  forgotEmail.value = ''
+  forgotSent.value = false
+}
+const handleForgotPassword = () => { forgotSent.value = true }
 </script>
 
 <template>
-  <main class="page-content">
-    <section class="page-hero">
-      <p class="eyebrow">Acesso rápido</p>
-      <h1 class="page-title">Entrar na Estante Viva</h1>
-      <p class="page-description">Use seu email e senha para gerenciar empréstimos, reservas e o seu perfil de biblioteca.</p>
-    </section>
-
-    <section class="form-panel">
-      <h2 class="section-title">Login</h2>
-      <p class="section-copy">Digite suas credenciais para continuar.</p>
-
-      <div v-if="authError || errors.submit" class="callout" role="alert">
-        {{ authError || errors.submit }}
+  <div class="auth-page">
+    <!-- Lado esquerdo: banner verde -->
+    <aside class="auth-side">
+      <div class="auth-side-logo">
+        <div class="auth-side-logo-img">
+          <Logo />
+        </div>
+        <span class="auth-side-logo-text">Estante Viva</span>
       </div>
+      <h2 class="auth-side-headline">
+        Sua biblioteca<br>na palma da mão
+      </h2>
+      <p class="auth-side-sub">
+        Acesse o acervo, faça empréstimos, acompanhe reservas e gerencie seu histórico de leituras com facilidade.
+      </p>
+      <div class="auth-side-stats">
+        <div>
+          <span class="auth-stat-value">{{ stats.books }}</span>
+          <span class="auth-stat-label">Livros</span>
+        </div>
+        <div>
+          <span class="auth-stat-value">{{ stats.users }}</span>
+          <span class="auth-stat-label">Usuários</span>
+        </div>
+        <div>
+          <span class="auth-stat-value">{{ stats.loans }}</span>
+          <span class="auth-stat-label">Empréstimos</span>
+        </div>
+      </div>
+    </aside>
 
-      <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            placeholder="seu@email.com"
-            :aria-invalid="errors.email ? 'true' : undefined"
-          />
-          <span v-if="errors.email" class="status-note">{{ errors.email }}</span>
+    <!-- Lado direito: formulário -->
+    <div class="auth-form-side">
+      <div class="auth-form-card">
+        <div class="auth-form-header">
+          <h1>Bem-vindo de volta</h1>
+          <p>Não tem conta? <RouterLink to="/signup">Cadastre-se grátis</RouterLink></p>
         </div>
 
-        <div class="form-group">
-          <label for="password">Senha</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="••••••••"
-            :aria-invalid="errors.password ? 'true' : undefined"
-          />
-          <span v-if="errors.password" class="status-note">{{ errors.password }}</span>
+        <div v-if="submitError" class="callout" role="alert">
+          {{ submitError }}
         </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn">Entrar</button>
-          <button type="button" class="btn secondary" @click="openForgotPassword">Esqueceu a senha?</button>
-        </div>
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              placeholder="seu@email.com"
+              autocomplete="email"
+            />
+            <span v-if="errors.email" class="status-note">{{ errors.email }}</span>
+          </div>
 
-        <div class="form-actions">
-          <RouterLink to="/signup" class="btn secondary">Criar conta</RouterLink>
-        </div>
-      </form>
-    </section>
+          <div class="form-group">
+            <label for="password">Senha</label>
+            <input
+              id="password"
+              v-model="password"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <span v-if="errors.password" class="status-note">{{ errors.password }}</span>
+          </div>
 
-    <div v-if="forgotPasswordOpen" class="modal-backdrop" @click.self="closeForgotPassword">
-      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="forgot-password-title">
-        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
-          <h2 id="forgot-password-title">Recuperar senha</h2>
-          <button class="modal-close" type="button" @click="closeForgotPassword">✕</button>
-        </div>
+          <div style="text-align: right; margin-bottom: 1.25rem;">
+            <button type="button" class="forgot-link" @click="openForgotPassword">
+              Esqueceu a senha?
+            </button>
+          </div>
 
-        <p class="section-copy">Digite o email da sua conta para receber instruções de redefinição de senha.</p>
+          <button type="submit" class="btn" style="width: 100%;">
+            {{ isSubmitting ? 'Entrando...' : 'Entrar' }}
+          </button>
+        </form>
 
-        <div v-if="forgotStatus" class="callout" role="status">{{ forgotStatus }}</div>
-
-        <div class="form-group">
-          <label for="forgotEmail">Email</label>
-          <input
-            id="forgotEmail"
-            v-model="forgotEmail"
-            type="email"
-            placeholder="seu@email.com"
-            :aria-invalid="forgotErrors.email ? 'true' : undefined"
-          />
-          <span v-if="forgotErrors.email" class="status-note">{{ forgotErrors.email }}</span>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn secondary" @click="closeForgotPassword">Cancelar</button>
-          <button type="button" class="btn" @click="handleForgotPassword">Enviar link</button>
+        <div class="auth-form-footer">
+          Novo por aqui? <RouterLink to="/signup">Criar conta</RouterLink>
         </div>
       </div>
     </div>
-  </main>
+  </div>
+
+  <!-- Modal: Esqueci a senha -->
+  <Teleport to="body">
+    <div v-if="showForgotPassword" class="modal-backdrop" @click.self="closeForgotPassword">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <span class="modal-title">Recuperar senha</span>
+          <button type="button" class="modal-close" @click="closeForgotPassword">×</button>
+        </div>
+        <div v-if="forgotSent" class="callout info">
+          Se o email estiver cadastrado, você receberá as instruções em breve.
+        </div>
+        <template v-else>
+          <p style="font-size: 0.875rem; color: var(--gray-500); margin-bottom: 1.25rem;">
+            Informe seu email e enviaremos um link para redefinir sua senha.
+          </p>
+          <div class="form-group">
+            <label for="forgot-email">Email</label>
+            <input id="forgot-email" v-model="forgotEmail" type="email" placeholder="seu@email.com" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn secondary" @click="closeForgotPassword">Cancelar</button>
+            <button type="button" class="btn" @click="handleForgotPassword">Enviar link</button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </Teleport>
 </template>
+
+<style scoped>
+.forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--green-600);
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: none;
+}
+.forgot-link:hover {
+  color: var(--green-500);
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+</style>
